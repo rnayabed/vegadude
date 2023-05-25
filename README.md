@@ -25,4 +25,4 @@ cmake --build build
 
 ## Note
 
-vegadude does not play well with sniffer programs like `interceptty`, *for now*.
+vegadude does not play well with sniffer programs like [interceptty](https://github.com/geoffmeyers/interceptty), *for now*.
