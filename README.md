@@ -1,9 +1,8 @@
 # vegadude
 
-vegadude is a utility application uploading programs on CDAC's VEGA Microprocessors.
+vegadude is a utility application to upload programs on CDAC's VEGA Microprocessors.
 
 It is heavily under development and currently only uploading via Serial + XMODEM+CRC-16 has been implemented.
-
 
 ## Clone
 
