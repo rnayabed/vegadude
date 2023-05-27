@@ -28,13 +28,16 @@
 
 #include <cmath>
 
+#include "logger.h"
 #include "serialdevice.h"
 #include "xmodem.h"
 
 enum ArgType
 {
+    LOG_TO_FILE,
     BINARY_PATH,
     TARGET_PATH,
+    SERIAL_DEVICE_ARIES,
     SERIAL_PARITY_YES,
     SERIAL_STOP_BITS,
     SERIAL_RTS_CTS_YES,
@@ -48,7 +51,9 @@ ArgType getArgType(char* const& arg)
 {
     using namespace std;
 
-    if (!string(arg).compare("-bp") ||
+    if(!string(arg).compare("-o"))
+        return ArgType::LOG_TO_FILE;
+    else if (!string(arg).compare("-bp") ||
         !string(arg).compare("--binary-path"))
         return ArgType::BINARY_PATH;
     else if (!string(arg).compare("-tp") ||
@@ -72,74 +77,69 @@ ArgType getArgType(char* const& arg)
     else if(!string(arg).compare("-sau") ||
             !string(arg).compare("--start-after-upload"))
         return ArgType::START_AFTER_UPLOAD;
+    else if(!string(arg).compare("-aries"))
+        return ArgType::SERIAL_DEVICE_ARIES;
 
     return ArgType::INVALID;
 }
 
 void printUsage()
 {
-    std::clog << "Usage" << std::endl;
+    Logger::get() << "Usage." << Logger::NewLine;
 }
 
-bool validateTargetProperties(const TargetProperties& tp)
+bool validateDeviceProperties(const std::string& targetPath, const SerialDevice::DeviceProperties& deviceProperties)
 {
     using namespace std;
 
     bool valid = true;
 
-    if (tp.path.empty())
+    if (targetPath.empty())
     {
-        clog << "Target path not specified." << std::endl;
+        Logger::get() << "Target path not specified." << Logger::NewLine;
         valid = false;
     }
 
-    if (tp.stopBits == -1)
+    if (deviceProperties.stopBits == -1)
     {
-        clog << "Stop bits not specified." << std::endl;
+        Logger::get() << "Stop bits not specified." << Logger::NewLine;
         valid = false;
     }
-    else if (tp.stopBits != 1 && tp.stopBits != 2)
+    else if (deviceProperties.stopBits != 1 && deviceProperties.stopBits != 2)
     {
         // FIXME: Investigate: Is this true?
-        clog << "There can only be 1 or 2 stop bits!" << std::endl;
+        Logger::get() << "There can only be 1 or 2 stop bits!" << Logger::NewLine;
         valid = false;
     }
 
-    if (tp.bits == -1)
+    if (deviceProperties.bits == -1)
     {
-        clog << "Bits per byte not specified." << std::endl;
+        Logger::get() << "Bits per byte not specified." << Logger::NewLine;
         valid = false;
     }
-    else if (!(tp.bits >= 5 && tp.bits <= 8))
+    else if (!(deviceProperties.bits >= 5 && deviceProperties.bits <= 8))
     {
-        clog << "There can be 5-8 bits per byte." << std::endl;
+        Logger::get() << "There can be 5-8 bits per byte." << Logger::NewLine;
         valid = false;
     }
 
-    if (tp.baud == -1)
+    if (deviceProperties.baud == -1)
     {
-        clog << "Baud rate not specified." << std::endl;
+        Logger::get() << "Baud rate not specified." << Logger::NewLine;
         valid = false;
     }
 
     return valid;
 }
 
-void printTargetProperties(const TargetProperties& tp)
+void printDeviceProperties(const SerialDevice::DeviceProperties& deviceProperties)
 {
     using namespace std;
-    clog << "path " << tp.path;
-    clog << "\nparity " << tp.parity;
-    clog << "\nstopBits " << tp.stopBits;
-    clog << "\nrtsCts " << tp.rtsCts;
-    clog << "\nbits " << tp.bits;
-    clog << "\nbaud " << tp.baud << std::endl;
-}
-
-void handleError()
-{
-    std::clog << "Error code : " << errno << std::endl;
-    std::clog << "Reason: " << strerror(errno);
+    Logger::get() << "parity " << deviceProperties.parity << Logger::NewLine;
+    Logger::get() << "stopBits " << deviceProperties.stopBits << Logger::NewLine;
+    Logger::get() << "rtsCts " << deviceProperties.rtsCts << Logger::NewLine;
+    Logger::get() << "bits " << deviceProperties.bits << Logger::NewLine;
+    Logger::get() << "baud " << deviceProperties.baud << Logger::NewLine;
 }
 
 int main(int argc, char** argv)
@@ -152,78 +152,125 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    TargetProperties tp;
+    SerialDevice::DeviceProperties dp;
 
+    std::string targetPath;
     std::string binaryPath;
+    std::string logFilePath;
+
     bool startAfterUpload = false;
+
+    bool isDevPropsSetManual = false;
+    bool isDevPropsSetAuto = false;
+
 
     for (size_t i = 1; i < argc; i++)
     {
         switch (getArgType(argv[i]))
         {
+        case ArgType::LOG_TO_FILE:
+            logFilePath = argv[++i];
+            break;
         case ArgType::BINARY_PATH:
             binaryPath = argv[++i];
             break;
         case ArgType::TARGET_PATH:
-            tp.path = argv[++i];
+            targetPath = argv[++i];
             break;
         case ArgType::SERIAL_PARITY_YES:
-            tp.parity = true;
+            isDevPropsSetManual = true;
+            dp.parity = true;
             break;
         case ArgType::SERIAL_STOP_BITS:
-            tp.stopBits = std::stoi(argv[++i]);
+            isDevPropsSetManual = true;
+            dp.stopBits = std::stoi(argv[++i]);
             break;
         case ArgType::SERIAL_RTS_CTS_YES:
-            tp.rtsCts = true;
+            isDevPropsSetManual = true;
+            dp.rtsCts = true;
             break;
         case ArgType::SERIAL_BITS:
-            tp.bits = std::stoi(argv[++i]);
+            isDevPropsSetManual = true;
+            dp.bits = std::stoi(argv[++i]);
             break;
         case ArgType::SERIAL_BAUD_RATE:
-            tp.baud = std::stoi(argv[++i]);
+            isDevPropsSetManual = true;
+            dp.baud = std::stoi(argv[++i]);
             break;
         case ArgType::START_AFTER_UPLOAD:
+            isDevPropsSetManual = true;
             startAfterUpload = true;
             break;
+        case ArgType::SERIAL_DEVICE_ARIES:
+            isDevPropsSetAuto = true;
+            dp = SerialDevice::ARIES;
         case ArgType::INVALID:
-            std::clog << "Invalid argument " << argv[i] << std::endl;
+            Logger::get() << "Invalid argument " << argv[i];
             printUsage();
             return -1;
         }
     }
 
-    if (!validateTargetProperties(tp)) return -1;
+    if (isDevPropsSetAuto && isDevPropsSetManual)
+    {
+        Logger::get() << "You cannot use -aries and manually set device properties simultaneously."
+                      << Logger::NewLine;
+        return -1;
+    }
+
+    if (!validateDeviceProperties(targetPath, dp)) return -1;
+
+    if (!logFilePath.empty())
+    {
+        if(!Logger::get().setup(logFilePath))
+        {
+            Logger::get() << "Unable to setup logging!"
+                          << Logger::NewLine;
+            return -1;
+        }
+    }
 
     if (binaryPath.empty())
     {
-        std::clog << "Binary path not specified." << std::endl;
+        Logger::get() << "Binary path not specified." << Logger::NewLine;
         return -1;
     }
 
-    printTargetProperties(tp);
-    std::clog << "Binary Path: " << binaryPath << std::endl;
-
-
-    SerialDevice device{std::make_shared<TargetProperties>(tp)};
-
-    SerialDevice::Response devResponse = device.open();
-    if (devResponse != SerialDevice::Response::SUCCESS)
+    if (isDevPropsSetAuto)
     {
-        std::clog << "Failed to setup device. Exit with code : " << devResponse << std::endl;
-        return -1;
+        dp = SerialDevice::ARIES;
     }
 
-    XModem modem{std::make_unique<SerialDevice>(device), 128};
+    printDeviceProperties(dp);
 
-    XModem::Response modemResponse = modem.upload(binaryPath, startAfterUpload);
+    Logger::get() << "Device Path: " << targetPath << Logger::NewLine;
+    Logger::get() << "Binary Path: " << binaryPath << Logger::NewLine;
 
-    if (modemResponse != XModem::Response::SUCCESS)
+
+    SerialDevice device{targetPath, dp};
+
+    if (!device.open())
     {
-        std::clog << "Failed to upload file. Exit with code : " << modemResponse << std::endl;
+        Logger::get() << "Failed to setup serial device!"
+                      << Logger::NewLine << device.errorStr()
+                      << Logger::NewLine;
         return -1;
     }
 
-    std::clog << "Successfully uploaded!" << std::endl;
+    XModem modem{device, 128};
+
+    if (!modem.upload(binaryPath, startAfterUpload))
+    {
+        Logger::get() << "Failed to upload file!"
+                      << Logger::NewLine
+                      << ((modem.error() == XModem::Error::DEVICE_RELATED) ? device.errorStr() : modem.errorStr())
+                      << Logger::NewLine;
+        return -1;
+    }
+
+    Logger::get() << "Successfully uploaded!";
+
+    Logger::get().close();
 
     return 0;
 }

@@ -1,20 +1,3 @@
-#ifndef SERIALDEVICE_H
-#define SERIALDEVICE_H
-
-#include "targetproperties.h"
-#include <iostream>
-#include <fstream>
-#include <cstring>
-#include <fcntl.h>
-#include <errno.h>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-
-#include <chrono>
-#include <thread>
-
-#include <vector>
 /*
  * Copyright (C) 2023 Debayan Sutradhar (rnayabed) (debayansutradhar3@gmail.com)
  *
@@ -28,42 +11,74 @@
  * GNU General Public License for more details.
  */
 
-#include <array>
+#ifndef SERIALDEVICE_H
+#define SERIALDEVICE_H
 
+#include <filesystem>
+#include <iostream>
+#include <fstream>
+#include <cstring>
+#include <fcntl.h>
+#include <errno.h>
+#include <termios.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <chrono>
+#include <thread>
+#include <vector>
+#include <array>
 #include <cmath>
 
-class SerialDevice
+#include "device.h"
+
+class SerialDevice : public Device
 {
 public:
 
-    enum Response
+    enum Error
     {
-        SUCCESS,
-        ERROR_FAILED_TO_OPEN_DEVICE,
-        ERROR_FAILED_TO_GET_FD_ATTRS,
-        ERROR_FAILED_TO_SET_FD_ATTRS,
+        NONE,
+        FAILED_TO_OPEN_DEVICE,
+        FAILED_TO_GET_FD_ATTRS,
+        FAILED_TO_SET_FD_ATTRS,
         NOT_SUPPORTED,
-        ERROR_READ_FAILED,
-        ERROR_WRITE_FAILED,
-        ERROR_DEVICE_NOT_OPEN
+        READ_FAILED,
+        WRITE_FAILED,
+        DEVICE_NOT_OPEN
     };
 
-    SerialDevice(std::shared_ptr<TargetProperties> targetProperties);
-    Response open();
-    Response close();
+    struct DeviceProperties
+    {
+        bool parity = false;
+        int32_t stopBits = -1;
+        bool rtsCts = false;
+        int32_t bits = -1;
+        int32_t baud = -1;
+    };
+
+    constexpr static DeviceProperties ARIES{false, 1, false, 8, 115200};
+
+    SerialDevice(const std::filesystem::path& devicePath, const DeviceProperties& deviceProperties);
+
+    const Error& error();
+    std::string errorStr();
+
+    bool read(unsigned char* bytes, size_t size);
+    bool write(const unsigned char* bytes, size_t size);
+
+    bool open();
+    bool close();
     const int& linuxFD();
-    Response read(void* byte);
-    Response read(void* bytes, size_t bytesLen);
-    Response write(const void* byte);
-    Response write(const void* bytes, size_t bytesLen);
-    template <typename T> Response write(std::vector<T>& vector);
 
 private:
-    Response openLinux();
-    Response closeLinux();
+    Error m_error;
+
+    bool openLinux();
+    bool closeLinux();
 
     int m_linuxFD;
-    std::shared_ptr<TargetProperties> m_targetProperties;
+    const std::filesystem::path& m_devicePath;
+    const DeviceProperties& m_deviceProperties;
 };
 
 #endif // SERIALDEVICE_H

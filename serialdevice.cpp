@@ -13,25 +13,111 @@
 
 #include "serialdevice.h"
 
-SerialDevice::SerialDevice(std::shared_ptr<TargetProperties> targetProperties)
-    : m_targetProperties{targetProperties},
-      m_linuxFD{-1}
+SerialDevice::SerialDevice(const std::filesystem::path& devicePath, const DeviceProperties& deviceProperties)
+    : m_devicePath{devicePath},
+      m_deviceProperties{deviceProperties},
+      m_linuxFD{-1},
+      m_error{Error::NONE}
 {}
 
-SerialDevice::Response SerialDevice::open()
+const SerialDevice::Error &SerialDevice::error()
+{
+    return m_error;
+}
+
+std::string SerialDevice::errorStr()
+{
+    switch (m_error)
+    {
+    case NONE:
+        return "None";
+    case FAILED_TO_OPEN_DEVICE:
+        return "Failed to open device";
+    case FAILED_TO_GET_FD_ATTRS:
+        return "Failed to get file descriptor attributes";
+    case FAILED_TO_SET_FD_ATTRS:
+        return "Failed to set file descriptor attributes";
+    case NOT_SUPPORTED:
+        return "Operation not supported";
+    case READ_FAILED:
+        return "Read failed";
+    case WRITE_FAILED:
+        return "Write failed";
+    case DEVICE_NOT_OPEN:
+        return "Device not open";
+    }
+
+    return std::format("Unknown error {}", static_cast<int>(m_error));
+}
+
+bool SerialDevice::read(unsigned char *bytes, size_t size)
+{
+#ifdef __linux
+    if (m_linuxFD == -1)
+    {
+        m_error = Error::DEVICE_NOT_OPEN;
+        return false;
+    }
+    else
+    {
+        if (::read(m_linuxFD, bytes, size) != -1)
+        {
+            m_error = Error::NONE;
+            return true;
+        }
+        else
+        {
+            m_error = Error::READ_FAILED;
+            return false;
+        }
+    }
+#endif
+    m_error = Error::NOT_SUPPORTED;
+    return false;
+}
+
+bool SerialDevice::write(const unsigned char *bytes, size_t size)
+{
+#ifdef __linux
+    if (m_linuxFD == -1)
+    {
+        m_error = Error::DEVICE_NOT_OPEN;
+        return false;
+    }
+    else
+    {
+        if (::write(m_linuxFD, bytes, size) == size)
+        {
+            m_error = Error::NONE;
+            return true;
+        }
+        else
+        {
+            m_error = Error::WRITE_FAILED;
+            return false;
+        }
+    }
+#endif
+    m_error = Error::NOT_SUPPORTED;
+    return false;
+}
+
+bool SerialDevice::open()
 {
 #ifdef __linux
     return openLinux();
 #endif
-    return Response::NOT_SUPPORTED;
+    m_error = Error::NOT_SUPPORTED;
+    return false;
 }
 
-SerialDevice::Response SerialDevice::close()
+bool SerialDevice::close()
 {
 #ifdef __linux
     return closeLinux();
 #endif
-    return Response::NOT_SUPPORTED;
+    m_error = Error::NOT_SUPPORTED;
+    return false;
 }
 
 const int &SerialDevice::linuxFD()
@@ -39,84 +125,34 @@ const int &SerialDevice::linuxFD()
     return m_linuxFD;
 }
 
-SerialDevice::Response SerialDevice::read(void *byte)
+bool SerialDevice::openLinux()
 {
-    return read(byte, 1);
-}
-
-SerialDevice::Response SerialDevice::read(void* bytes,
-                                          size_t bytesLen)
-{
-#ifdef __linux
-    return (m_linuxFD == -1) ?
-                Response::ERROR_DEVICE_NOT_OPEN :
-                (::read(m_linuxFD, bytes, bytesLen) < 0) ?
-                                Response::ERROR_READ_FAILED :
-                                Response::SUCCESS;
-#endif
-    return Response::NOT_SUPPORTED;
-}
-
-SerialDevice::Response SerialDevice::write(const void *byte)
-{
-    return write(byte, 1);
-}
-
-SerialDevice::Response SerialDevice::write(const void* bytes,
-                                           size_t bytesLen)
-{
-#ifdef __linux
-    return (m_linuxFD == -1) ?
-                Response::ERROR_DEVICE_NOT_OPEN :
-                (::write(m_linuxFD, bytes, bytesLen) < 0) ?
-                                Response::ERROR_WRITE_FAILED :
-                                Response::SUCCESS;
-#endif
-    return Response::NOT_SUPPORTED;
-}
-
-template <typename T>
-SerialDevice::Response SerialDevice::write(std::vector<T> &vector)
-{
-#ifdef __linux
-    return (m_linuxFD == -1) ?
-                Response::ERROR_DEVICE_NOT_OPEN :
-                (::write(m_linuxFD, vector.data(), vector.size()) < 0) ?
-                                Response::ERROR_WRITE_FAILED :
-                                Response::SUCCESS;
-#endif
-    return Response::NOT_SUPPORTED;
-}
-
-template SerialDevice::Response SerialDevice
-    ::write<unsigned char>(std::vector<unsigned char> &vector);
-
-SerialDevice::Response SerialDevice::openLinux()
-{
-    m_linuxFD = ::open(m_targetProperties->path.c_str(),
-                           O_RDWR | O_NOCTTY);
+    m_linuxFD = ::open(m_devicePath.c_str(),
+                       O_RDWR | O_NOCTTY);
 
     if (m_linuxFD < 0)
     {
-        return Response::ERROR_FAILED_TO_OPEN_DEVICE;
+        m_error = Error::FAILED_TO_OPEN_DEVICE;
+        return false;
     }
 
     struct termios tty;
 
     if (ioctl(m_linuxFD, TCGETS, &tty) < 0)
     {
-        return Response::ERROR_FAILED_TO_GET_FD_ATTRS;
+        m_error =  Error::FAILED_TO_GET_FD_ATTRS;
+        return false;
     }
 
     // Parity
-    if (m_targetProperties->parity)
+    if ( m_deviceProperties.parity)
         tty.c_cflag |= PARENB;
     else
         tty.c_cflag &= ~PARENB;
 
 
     // Stop Bit
-    if (m_targetProperties->stopBits == 1)
+    if ( m_deviceProperties.stopBits == 1)
         tty.c_cflag &= ~CSTOPB;
     else
         tty.c_cflag |= CSTOPB;
@@ -124,18 +160,18 @@ SerialDevice::Response SerialDevice::openLinux()
 
     //Bits per byte
     tty.c_cflag &= ~CSIZE;
-    if (m_targetProperties->bits == 5)
+    if ( m_deviceProperties.bits == 5)
         tty.c_cflag |= CS5;
-    else if (m_targetProperties->bits == 6)
+    else if ( m_deviceProperties.bits == 6)
         tty.c_cflag |= CS6;
-    else if (m_targetProperties->bits == 7)
+    else if ( m_deviceProperties.bits == 7)
         tty.c_cflag |= CS7;
-    else if (m_targetProperties->bits == 8)
+    else if ( m_deviceProperties.bits == 8)
         tty.c_cflag |= CS8;
 
 
     // RTS/CTS
-    if (m_targetProperties->rtsCts)
+    if ( m_deviceProperties.rtsCts)
         tty.c_cflag |= CRTSCTS;
     else
         tty.c_cflag &= ~CRTSCTS;
@@ -188,16 +224,30 @@ SerialDevice::Response SerialDevice::openLinux()
     cfsetispeed(&tty, B115200);
     cfsetospeed(&tty, B115200);
 
-
-    return (ioctl(m_linuxFD, TCSETS, &tty) < 0) ?
-                ERROR_FAILED_TO_SET_FD_ATTRS :
-                SUCCESS;
+    if (!ioctl(m_linuxFD, TCSETS, &tty))
+    {
+        m_error = Error::NONE;
+        return true;
+    }
+    else
+    {
+        m_error = Error::FAILED_TO_SET_FD_ATTRS;
+        return false;
+    }
 }
 
-SerialDevice::Response SerialDevice::closeLinux()
+bool SerialDevice::closeLinux()
 {
     ioctl(m_linuxFD, TCFLSH, 2);
-    return (::close(m_linuxFD) < 0) ?
-                ERROR_FAILED_TO_SET_FD_ATTRS :
-                SUCCESS;
+
+    if (!::close(m_linuxFD))
+    {
+        m_error = Error::NONE;
+        return true;
+    }
+    else
+    {
+        m_error = Error::FAILED_TO_SET_FD_ATTRS;
+        return false;
+    }
 }

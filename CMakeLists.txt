@@ -19,10 +19,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_executable(vegadude
+    logger.h logger.cpp
     main.cpp
     crc.h crc.cpp
+    device.h device.cpp
     serialdevice.h serialdevice.cpp
-    targetproperties.h
     xmodem.h xmodem.cpp)
 
 install(TARGETS vegadude

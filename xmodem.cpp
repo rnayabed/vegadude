@@ -16,12 +16,40 @@
 
 #include <fstream>
 #include <istream>
+#include <iostream>
+#include <format>
 
-XModem::XModem(std::unique_ptr<SerialDevice> serialDevice, const size_t &blockSize)
-    : m_serialDevice{std::move(serialDevice)}, m_blockSize{blockSize}
+#include "logger.h"
+
+XModem::XModem(Device& device, const size_t &blockSize)
+    : m_device{device},
+      m_blockSize{blockSize},
+      m_error{Error::NONE}
 {}
 
-XModem::Response XModem::upload(const std::string &filePath, const bool& startAfterUpload)
+const XModem::Error &XModem::error()
+{
+    return m_error;
+}
+
+std::string XModem::errorStr()
+{
+    switch (m_error)
+    {
+    case NONE:
+        return "None";
+    case DEVICE_RELATED:
+        return "Device related error";
+    case FILE_OPEN_FAILED:
+        return "Failed to open file";
+    case CANCELLED:
+        return "Operation cancelled";
+    }
+
+    return std::format("Unknown error {}", static_cast<int>(m_error));
+}
+
+bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfterUpload)
 {
     unsigned char blockNumber1 = 1;
     unsigned char blockNumber2;
@@ -33,7 +61,8 @@ XModem::Response XModem::upload(const std::string &filePath, const bool& startAf
 
     if(!file.is_open())
     {
-        return XModem::Response::ERROR_FILE_OPEN_FAILED;
+        m_error = Error::FILE_OPEN_FAILED;
+        return false;
     }
 
     std::vector<unsigned char> fileBlocks(m_blockSize, 0);
@@ -42,13 +71,13 @@ XModem::Response XModem::upload(const std::string &filePath, const bool& startAf
     {
         unsigned char rb;
 
-        if (m_serialDevice->read(&rb) !=
-                SerialDevice::Response::SUCCESS)
+        if (!m_device.read(&rb))
         {
-            return XModem::Response::ERROR_READ_FAILED;
+            m_error = Error::DEVICE_RELATED;
+            return false;
         }
 
-        std::clog << "RECEIVED " << +rb << std::endl;
+        Logger::get() << "READ: " << +rb << Logger::NewLine;
 
         if (rb != XModem::NAK)
         {
@@ -68,7 +97,8 @@ XModem::Response XModem::upload(const std::string &filePath, const bool& startAf
             }
             else if (rb == XModem::CAN)
             {
-                return XModem::Response::CANCELLED;
+                m_error = Error::CANCELLED;
+                return false;
             }
             else
             {
@@ -77,12 +107,13 @@ XModem::Response XModem::upload(const std::string &filePath, const bool& startAf
 
             if (file.eof())
             {
-                m_serialDevice->write(&EOT);
+                m_device.write(&EOT, 1);
 
                 if (startAfterUpload)
-                    m_serialDevice->write(&CR);
+                    m_device.write(&CR, 1);
 
-                return XModem::Response::SUCCESS;
+                m_error = Error::NONE;
+                return true;
             }
             else
             {
@@ -96,25 +127,26 @@ XModem::Response XModem::upload(const std::string &filePath, const bool& startAf
             }
         }
 
-        m_serialDevice->write(&XModem::SOH);
-        m_serialDevice->write(&blockNumber1);
+        m_device.write(&XModem::SOH);
+        m_device.write(&blockNumber1);
 
         blockNumber2 = 255 - blockNumber1;
-        m_serialDevice->write(&blockNumber2);
+        m_device.write(&blockNumber2);
 
-        m_serialDevice->write(fileBlocks);
+        m_device.write(fileBlocks.data(), fileBlocks.size());
 
-        uint16_t crc = CRC::generateCRC16CCIT(fileBlocks);
+        uint16_t crc = CRC::generateCRC16CCITT(fileBlocks);
         crcBlock[0] = crc >> 8;
         crcBlock[1] = crc;
-        m_serialDevice->write(crcBlock, 2);
+        m_device.write(crcBlock, 2);
 
-        std::clog << "CRC " << crc << "; Sent block " << g << std::endl << std::endl;
+        Logger::get() << "Sent block " << g << Logger::NewLine;
     }
 
-    m_serialDevice->close();
+    file.close();
 
-    return XModem::SUCCESS;
+    m_error = Error::NONE;
+    return true;
 }
 
 

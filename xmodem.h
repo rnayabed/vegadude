@@ -14,28 +14,34 @@
 #ifndef XMODEM_H
 #define XMODEM_H
 
-#include "serialdevice.h"
+#include "device.h"
 #include <vector>
+#include <filesystem>
 
 class XModem
 {
 public:
 
-    enum Response
+    enum Error
     {
-        SUCCESS,
-        ERROR_READ_FAILED,
-        ERROR_FILE_OPEN_FAILED,
+        NONE,
+        DEVICE_RELATED,
+        FILE_OPEN_FAILED,
         CANCELLED
     };
 
-    XModem(std::unique_ptr<SerialDevice> serialDevice,
+    XModem(Device& device,
            const size_t& blockSize);
 
-    Response upload(const std::string& filePath, const bool& startAfterUpload);
+    const Error& error();
+    std::string errorStr();
+
+    bool upload(const std::filesystem::path& filePath, const bool& startAfterUpload);
 
 private:
-    std::unique_ptr<SerialDevice> m_serialDevice;
+    Error m_error;
+
+    Device& m_device;
     size_t m_blockSize;
 
     constexpr static unsigned char SOH   {0x01};

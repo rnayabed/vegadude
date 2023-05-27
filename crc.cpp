@@ -13,16 +13,20 @@
 
 #include "crc.h"
 
-uint16_t CRC::generateCRC16CCIT(std::vector<unsigned char> bytes)
+namespace CRC
 {
-    uint16_t final = 0;
-    for (std::size_t i = 0; i < bytes.size(); i++)
+
+uint16_t generateCRC16CCITT(std::span<const unsigned char> bytes)
+{
+    uint16_t result = 0;
+    for (auto&& byte : bytes)
     {
         // we xor the MSB of result (u16) with the byte -> we get the index (byte value) to fetch.
         // then we xor the whole result with the existing result
-        final = (final << 8) ^ CRC::CRC16CCITTable[(((final >> 8) ^ bytes[i]))];
-        //final = final ^ crc_table[bytes[i]];
+        result = (result << 8) ^ CRC::CRC16CCITTable[(((result >> 8) ^ byte))];
     }
 
-    return final;
+    return result;
+}
+
 }
