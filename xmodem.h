@@ -40,8 +40,6 @@ public:
 
     bool upload(const std::filesystem::path& filePath, const bool& startAfterUpload);
 
-    constexpr static int32_t ARIES_blockSize = 128;
-
 private:
     Error m_error;
 

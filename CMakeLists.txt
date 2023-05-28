@@ -29,6 +29,7 @@ add_executable(vegadude
 add_compile_definitions(
     VERSION=1.0
     LICENSE="https://github.com/rnayabed/vegadude/blob/master/LICENSE"
+    ARIES_XMODEM_BLOCK_SIZE=128
 )
 
 target_compile_options(vegadude PUBLIC

@@ -348,7 +348,7 @@ int main(int argc, char** argv)
     else if (isDevPropsSetAuto)
     {
         dp = SerialDevice::ARIES;
-        xmodemBlockSize = XModem::ARIES_blockSize;
+        xmodemBlockSize = ARIES_XMODEM_BLOCK_SIZE;
     }
 
     if (!validateProps(targetPath, xmodemMaxRetry, xmodemBlockSize, serialReadTimeout, dp)) return -1;
