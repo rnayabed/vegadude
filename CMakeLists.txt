@@ -26,6 +26,20 @@ add_executable(vegadude
     serialdevice.h serialdevice.cpp
     xmodem.h xmodem.cpp)
 
+add_compile_definitions(
+    VERSION=1.0
+    LICENSE="https://github.com/rnayabed/vegadude/blob/master/LICENSE"
+)
+
+target_compile_options(vegadude PUBLIC
+    $<$<CONFIG:Debug>:-O0 -ggdb3>
+    $<$<CONFIG:Release>:-Os -Wl,--gc-sections
+    -Wl,-Map=taurus22.map -nostartfiles -fno-builtin-printf
+    -fno-builtin-puts -fdata-sections -ffunction-sections -fno-builtin-memcmp >
+    $<$<CONFIG:MinSizeRel>:-Os>
+    $<$<CONFIG:RelWithDebInfo>:-Og -ggdb>
+)
+
 install(TARGETS vegadude
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

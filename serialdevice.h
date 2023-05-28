@@ -58,7 +58,9 @@ public:
 
     constexpr static DeviceProperties ARIES{false, 1, false, 8, 115200};
 
-    SerialDevice(const std::filesystem::path& devicePath, const DeviceProperties& deviceProperties);
+    SerialDevice(const std::filesystem::path& devicePath,
+                 const int32_t& readTimeout,
+                 const DeviceProperties& deviceProperties);
 
     const Error& error();
     std::string errorStr();
@@ -77,6 +79,7 @@ private:
     bool closeLinux();
 
     int m_linuxFD;
+    int m_readTimeout;
     const std::filesystem::path& m_devicePath;
     const DeviceProperties& m_deviceProperties;
 };

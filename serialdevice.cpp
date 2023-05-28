@@ -13,8 +13,11 @@
 
 #include "serialdevice.h"
 
-SerialDevice::SerialDevice(const std::filesystem::path& devicePath, const DeviceProperties& deviceProperties)
+SerialDevice::SerialDevice(const std::filesystem::path& devicePath,
+                           const int32_t& readTimeout,
+                           const DeviceProperties& deviceProperties)
     : m_devicePath{devicePath},
+      m_readTimeout{readTimeout},
       m_deviceProperties{deviceProperties},
       m_linuxFD{-1},
       m_error{Error::NONE}
@@ -216,13 +219,13 @@ bool SerialDevice::openLinux()
     // Line discpline not covered
 
     // Control characters (cc) (VMIN, VTIME)
-    tty.c_cc[VMIN] = 1;
-    tty.c_cc[VTIME] = 255; // wait upto 10 desiseconds
+    tty.c_cc[VMIN] = 0;
+    tty.c_cc[VTIME] = m_readTimeout / 100; // milli -> deci
 
 
     // set baud rate
-    cfsetispeed(&tty, B115200);
-    cfsetospeed(&tty, B115200);
+    cfsetispeed(&tty, m_deviceProperties.baud);
+    cfsetospeed(&tty, m_deviceProperties.baud);
 
     if (!ioctl(m_linuxFD, TCSETS, &tty))
     {

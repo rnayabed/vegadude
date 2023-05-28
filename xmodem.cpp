@@ -21,8 +21,9 @@
 
 #include "logger.h"
 
-XModem::XModem(Device& device, const size_t &blockSize)
+XModem::XModem(Device& device, const int32_t& maxRetry, const int32_t &blockSize)
     : m_device{device},
+      m_maxRetry{maxRetry},
       m_blockSize{blockSize},
       m_error{Error::NONE}
 {}
@@ -42,6 +43,8 @@ std::string XModem::errorStr()
         return "Device related error";
     case FILE_OPEN_FAILED:
         return "Failed to open file";
+    case MAX_RETRY_SURPASSED:
+        return "Max retries surpassed";
     case CANCELLED:
         return "Operation cancelled";
     }
@@ -56,6 +59,7 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
     unsigned char crcBlock[2];
 
     size_t g = 0;
+    int32_t currentTry = 0;
 
     std::ifstream file{filePath};
 
@@ -77,6 +81,14 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
             return false;
         }
 
+        if (currentTry >= m_maxRetry)
+        {
+            m_error = Error::MAX_RETRY_SURPASSED;
+            return false;
+        }
+
+        currentTry++;
+
         Logger::get() << "READ: " << +rb << Logger::NewLine;
 
         if (rb != XModem::NAK)
@@ -93,6 +105,8 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
                 else
                     blockNumber1++;
 
+                currentTry = 0;
+
                 g++;
             }
             else if (rb == XModem::CAN)
@@ -107,10 +121,10 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
 
             if (file.eof())
             {
-                m_device.write(&EOT, 1);
+                if (!m_device.write(&EOT)) goto write_failed;
 
                 if (startAfterUpload)
-                    m_device.write(&CR, 1);
+                    if (!m_device.write(&CR)) goto write_failed;
 
                 m_error = Error::NONE;
                 return true;
@@ -127,18 +141,16 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
             }
         }
 
-        m_device.write(&XModem::SOH);
-        m_device.write(&blockNumber1);
-
         blockNumber2 = 255 - blockNumber1;
-        m_device.write(&blockNumber2);
-
-        m_device.write(fileBlocks.data(), fileBlocks.size());
-
         uint16_t crc = CRC::generateCRC16CCITT(fileBlocks);
         crcBlock[0] = crc >> 8;
         crcBlock[1] = crc;
-        m_device.write(crcBlock, 2);
+
+        if (!m_device.write(&XModem::SOH) ||
+                !m_device.write(&blockNumber1) ||
+                !m_device.write(&blockNumber2) ||
+                !m_device.write(fileBlocks.data(), fileBlocks.size()) ||
+                !m_device.write(crcBlock, 2)) goto write_failed;
 
         Logger::get() << "Sent block " << g << Logger::NewLine;
     }
@@ -147,6 +159,10 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
 
     m_error = Error::NONE;
     return true;
+
+    write_failed:
+    m_error = Error::DEVICE_RELATED;
+    return false;
 }
 
 

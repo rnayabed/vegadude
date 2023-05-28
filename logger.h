@@ -4,6 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <fstream>
+#include <filesystem>
 
 class Logger
 {
@@ -11,7 +12,7 @@ public:
     Logger();
 
     static Logger& get();
-    bool setup(std::string&  filePath);
+    bool setup(std::filesystem::path& filePath);
     void close();
 
     constexpr static char NewLine {'\n'};

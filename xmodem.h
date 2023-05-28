@@ -27,22 +27,28 @@ public:
         NONE,
         DEVICE_RELATED,
         FILE_OPEN_FAILED,
+        MAX_RETRY_SURPASSED,
         CANCELLED
     };
 
     XModem(Device& device,
-           const size_t& blockSize);
+           const int32_t& maxRetry,
+           const int32_t& blockSize);
 
     const Error& error();
     std::string errorStr();
 
     bool upload(const std::filesystem::path& filePath, const bool& startAfterUpload);
 
+    constexpr static int32_t ARIES_blockSize = 128;
+
 private:
     Error m_error;
 
     Device& m_device;
-    size_t m_blockSize;
+
+    int32_t m_maxRetry;
+    int32_t m_blockSize;
 
     constexpr static unsigned char SOH   {0x01};
     constexpr static unsigned char EOT   {0x04};
