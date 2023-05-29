@@ -43,8 +43,6 @@ target_compile_options(vegadude PRIVATE
     $<$<CONFIG:RelWithDebInfo>:-Og -ggdb>
 )
 
-target_link_options(vegadude PRIVATE -static)
-
 install(TARGETS vegadude
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

@@ -273,11 +273,7 @@ bool SerialDevice::open()
     }
 
     COMMTIMEOUTS timeouts;
-    timeouts.ReadIntervalTimeout = 50;
-    timeouts.ReadTotalTimeoutConstant = 50;
-    timeouts.ReadTotalTimeoutMultiplier = 10;
-    timeouts.WriteTotalTimeoutConstant = 50;
-    timeouts.WriteTotalTimeoutMultiplier = 10;
+    timeouts.ReadIntervalTimeout = m_readTimeout;
 
     if (SetCommTimeouts(m_winHandle, &timeouts) == FALSE)
     {
@@ -298,7 +294,6 @@ bool SerialDevice::close()
 
 bool SerialDevice::read(unsigned char *bytes, size_t size)
 {
-    // FIXME: needs to return the number of bytes read.
     if (ReadFile(m_winHandle, bytes, size, NULL, NULL))
     {
         m_error = Error::NONE;
@@ -313,7 +308,10 @@ bool SerialDevice::read(unsigned char *bytes, size_t size)
 
 bool SerialDevice::write(const unsigned char *bytes, size_t size)
 {
-    if (WriteFile(m_winHandle, bytes, size, NULL, NULL))
+    unsigned long written;
+    bool result = WriteFile(m_winHandle, bytes, size, &written, NULL);
+
+    if (result && size != written)
     {
         m_error = Error::NONE;
         return true;
