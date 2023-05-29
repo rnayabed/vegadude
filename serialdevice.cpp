@@ -14,13 +14,12 @@
 #include "serialdevice.h"
 
 SerialDevice::SerialDevice(const std::filesystem::path& devicePath,
-                           const int32_t& readTimeout,
-                           const DeviceProperties& deviceProperties)
-    : m_devicePath{devicePath},
-      m_readTimeout{readTimeout},
+                           const DeviceProperties& deviceProperties,
+                           const int32_t& readTimeout)
+    : m_error{Error::NONE},
+      m_devicePath{devicePath},
       m_deviceProperties{deviceProperties},
-      m_linuxFD{-1},
-      m_error{Error::NONE}
+      m_readTimeout{readTimeout}
 {}
 
 const SerialDevice::Error &SerialDevice::error()
@@ -50,85 +49,11 @@ std::string SerialDevice::errorStr()
         return "Device not open";
     }
 
-    return std::format("Unknown error {}", static_cast<int>(m_error));
+    return "Unknown error " + std::to_string(m_error);
 }
 
-bool SerialDevice::read(unsigned char *bytes, size_t size)
-{
 #ifdef __linux
-    if (m_linuxFD == -1)
-    {
-        m_error = Error::DEVICE_NOT_OPEN;
-        return false;
-    }
-    else
-    {
-        if (::read(m_linuxFD, bytes, size) != -1)
-        {
-            m_error = Error::NONE;
-            return true;
-        }
-        else
-        {
-            m_error = Error::READ_FAILED;
-            return false;
-        }
-    }
-#endif
-    m_error = Error::NOT_SUPPORTED;
-    return false;
-}
-
-bool SerialDevice::write(const unsigned char *bytes, size_t size)
-{
-#ifdef __linux
-    if (m_linuxFD == -1)
-    {
-        m_error = Error::DEVICE_NOT_OPEN;
-        return false;
-    }
-    else
-    {
-        if (::write(m_linuxFD, bytes, size) == size)
-        {
-            m_error = Error::NONE;
-            return true;
-        }
-        else
-        {
-            m_error = Error::WRITE_FAILED;
-            return false;
-        }
-    }
-#endif
-    m_error = Error::NOT_SUPPORTED;
-    return false;
-}
-
 bool SerialDevice::open()
-{
-#ifdef __linux
-    return openLinux();
-#endif
-    m_error = Error::NOT_SUPPORTED;
-    return false;
-}
-
-bool SerialDevice::close()
-{
-#ifdef __linux
-    return closeLinux();
-#endif
-    m_error = Error::NOT_SUPPORTED;
-    return false;
-}
-
-const int &SerialDevice::linuxFD()
-{
-    return m_linuxFD;
-}
-
-bool SerialDevice::openLinux()
 {
     m_linuxFD = ::open(m_devicePath.c_str(),
                        O_RDWR | O_NOCTTY);
@@ -239,7 +164,7 @@ bool SerialDevice::openLinux()
     }
 }
 
-bool SerialDevice::closeLinux()
+bool SerialDevice::close()
 {
     ioctl(m_linuxFD, TCFLSH, 2);
 
@@ -254,3 +179,150 @@ bool SerialDevice::closeLinux()
         return false;
     }
 }
+
+bool SerialDevice::read(unsigned char *bytes, size_t size)
+{
+    if (m_linuxFD == -1)
+    {
+        m_error = Error::DEVICE_NOT_OPEN;
+        return false;
+    }
+    else
+    {
+        if (::read(m_linuxFD, bytes, size) != -1)
+        {
+            m_error = Error::NONE;
+            return true;
+        }
+        else
+        {
+            m_error = Error::READ_FAILED;
+            return false;
+        }
+    }
+}
+
+bool SerialDevice::write(const unsigned char *bytes, size_t size)
+{
+    if (m_linuxFD == -1)
+    {
+        m_error = Error::DEVICE_NOT_OPEN;
+        return false;
+    }
+    else
+    {
+        if (::write(m_linuxFD, bytes, size) == size)
+        {
+            m_error = Error::NONE;
+            return true;
+        }
+        else
+        {
+            m_error = Error::WRITE_FAILED;
+            return false;
+        }
+    }
+    m_error = Error::NOT_SUPPORTED;
+    return false;
+}
+
+#elif __WIN32
+
+bool SerialDevice::open()
+{
+    m_winHandle = CreateFile(m_devicePath.c_str(),
+                            GENERIC_READ | GENERIC_WRITE,
+                            0,
+                            NULL,
+                            OPEN_EXISTING,
+                            0,
+                            NULL);
+
+    if (m_winHandle == INVALID_HANDLE_VALUE)
+    {
+        m_error = Error::FAILED_TO_OPEN_DEVICE;
+        return false;
+    }
+
+    DCB params;
+
+    if(GetCommState(m_winHandle, &params) == FALSE)
+    {
+        m_error = Error::FAILED_TO_GET_FD_ATTRS;
+        return false;
+    }
+
+    params.BaudRate = m_deviceProperties.baud;
+    params.ByteSize = m_deviceProperties.bits;
+
+    if (m_deviceProperties.stopBits == 1)
+    {
+        params.StopBits = ONESTOPBIT;
+    }
+    else
+    {
+        params.StopBits = TWOSTOPBITS;
+    }
+
+    params.Parity = m_deviceProperties.parity;
+
+    if (SetCommState(m_winHandle, &params) == FALSE)
+    {
+        m_error = Error::FAILED_TO_SET_FD_ATTRS;
+        return false;
+    }
+
+    COMMTIMEOUTS timeouts;
+    timeouts.ReadIntervalTimeout = 50;
+    timeouts.ReadTotalTimeoutConstant = 50;
+    timeouts.ReadTotalTimeoutMultiplier = 10;
+    timeouts.WriteTotalTimeoutConstant = 50;
+    timeouts.WriteTotalTimeoutMultiplier = 10;
+
+    if (SetCommTimeouts(m_winHandle, &timeouts) == FALSE)
+    {
+        // FIXME: This needs to be it's own enum entry
+        m_error = Error::FAILED_TO_SET_FD_ATTRS;
+        return false;
+    }
+
+    m_error = Error::NONE;
+    return true;
+}
+
+bool SerialDevice::close()
+{
+    m_error = Error::NOT_SUPPORTED;
+    return false;
+}
+
+bool SerialDevice::read(unsigned char *bytes, size_t size)
+{
+    // FIXME: needs to return the number of bytes read.
+    if (ReadFile(m_winHandle, bytes, size, NULL, NULL))
+    {
+        m_error = Error::NONE;
+        return true;
+    }
+    else
+    {
+        m_error = Error::READ_FAILED;
+        return false;
+    }
+}
+
+bool SerialDevice::write(const unsigned char *bytes, size_t size)
+{
+    if (WriteFile(m_winHandle, bytes, size, NULL, NULL))
+    {
+        m_error = Error::NONE;
+        return true;
+    }
+    else
+    {
+        m_error = Error::WRITE_FAILED;
+        return false;
+    }
+}
+
+#endif

@@ -18,18 +18,25 @@
 #include <iostream>
 #include <fstream>
 #include <cstring>
-#include <fcntl.h>
 #include <errno.h>
-#include <termios.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
 #include <chrono>
 #include <thread>
 #include <vector>
 #include <array>
 #include <cmath>
-
 #include "device.h"
+
+#ifdef __linux
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#elif __WIN32
+#define UNICODE
+#include <Windows.h>
+#include <stdio.h>
+#include <string.h>
+#endif
 
 class SerialDevice : public Device
 {
@@ -59,8 +66,8 @@ public:
     constexpr static DeviceProperties ARIES{false, 1, false, 8, 115200};
 
     SerialDevice(const std::filesystem::path& devicePath,
-                 const int32_t& readTimeout,
-                 const DeviceProperties& deviceProperties);
+                 const DeviceProperties& deviceProperties,
+                 const int32_t& readTimeout);
 
     const Error& error();
     std::string errorStr();
@@ -70,18 +77,22 @@ public:
 
     bool open();
     bool close();
-    const int& linuxFD();
 
 private:
     Error m_error;
+    const std::filesystem::path& m_devicePath;
+    const DeviceProperties& m_deviceProperties;
+    int32_t m_readTimeout;
+
+#ifdef __linux
+    int32_t m_linuxFD = -1;
+#elif __WIN32
+    HANDLE m_winHandle = NULL;
+#endif
 
     bool openLinux();
     bool closeLinux();
 
-    int m_linuxFD;
-    int m_readTimeout;
-    const std::filesystem::path& m_devicePath;
-    const DeviceProperties& m_deviceProperties;
 };
 
 #endif // SERIALDEVICE_H

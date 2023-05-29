@@ -42,9 +42,7 @@ public:
 
 private:
     Error m_error;
-
     Device& m_device;
-
     int32_t m_maxRetry;
     int32_t m_blockSize;
 

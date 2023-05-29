@@ -246,7 +246,7 @@ int stoi_e(char* str)
     {
         result = std::stoi(str);
     }
-    catch(std::invalid_argument)
+    catch(const std::invalid_argument&)
     {
         result = -1;
     }
@@ -277,7 +277,7 @@ int main(int argc, char** argv)
     int32_t xmodemBlockSize = -1;
     int32_t serialReadTimeout = 500;
 
-    for (size_t i = 1; i < argc; i++)
+    for (int32_t i = 1; i < argc; i++)
     {
         switch (getArgType(argv[i]))
         {
@@ -384,7 +384,7 @@ int main(int argc, char** argv)
                   << "XMODEM Max Retry: " << xmodemMaxRetry << Logger::NewLine
                   << "================================================" << Logger::NewLine;
 
-    SerialDevice device{targetPath, serialReadTimeout, dp};
+    SerialDevice device{targetPath, dp, serialReadTimeout};
 
     if (!device.open())
     {

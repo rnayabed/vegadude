@@ -32,7 +32,9 @@ add_compile_definitions(
     ARIES_XMODEM_BLOCK_SIZE=128
 )
 
-target_compile_options(vegadude PUBLIC
+target_compile_options(vegadude PRIVATE
+    -Wall -Wextra -Werror
+
     $<$<CONFIG:Debug>:-O0 -ggdb3>
     $<$<CONFIG:Release>:-Os -Wl,--gc-sections
     -Wl,-Map=taurus22.map -nostartfiles -fno-builtin-printf
@@ -40,6 +42,8 @@ target_compile_options(vegadude PUBLIC
     $<$<CONFIG:MinSizeRel>:-Os>
     $<$<CONFIG:RelWithDebInfo>:-Og -ggdb>
 )
+
+target_link_options(vegadude PRIVATE -static)
 
 install(TARGETS vegadude
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

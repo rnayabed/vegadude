@@ -17,15 +17,14 @@
 #include <fstream>
 #include <istream>
 #include <iostream>
-#include <format>
 
 #include "logger.h"
 
 XModem::XModem(Device& device, const int32_t& maxRetry, const int32_t &blockSize)
-    : m_device{device},
+    : m_error{Error::NONE},
+      m_device{device},
       m_maxRetry{maxRetry},
-      m_blockSize{blockSize},
-      m_error{Error::NONE}
+      m_blockSize{blockSize}
 {}
 
 const XModem::Error &XModem::error()
@@ -49,7 +48,7 @@ std::string XModem::errorStr()
         return "Operation cancelled";
     }
 
-    return std::format("Unknown error {}", static_cast<int>(m_error));
+    return "Unknown error " + std::to_string(m_error);
 }
 
 bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfterUpload)
@@ -61,7 +60,9 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
     size_t g = 0;
     int32_t currentTry = 0;
 
-    std::ifstream file{filePath};
+    std::ifstream file{filePath, std::ios_base::in | std::ios_base::binary};
+
+    std::cout << "FILE PATH" << filePath << "\nm_blockSize:" << m_blockSize << std::endl;
 
     if(!file.is_open())
     {
@@ -121,11 +122,12 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
 
             if (file.eof())
             {
-                if (!m_device.write(&EOT)) goto write_failed;
+                if (!m_device.write(&EOT)) break;
 
                 if (startAfterUpload)
-                    if (!m_device.write(&CR)) goto write_failed;
+                    if (!m_device.write(&CR)) break;
 
+                file.close();
                 m_error = Error::NONE;
                 return true;
             }
@@ -133,9 +135,10 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
             {
                 file.read(reinterpret_cast<char*>(fileBlocks.data()), m_blockSize);
 
+                std::cout << "file.gcount(): " << file.gcount() << std::endl;
                 if (file.gcount() != m_blockSize)
                 {
-                    for (size_t i = file.gcount(); i < m_blockSize; i++)
+                    for (int32_t i = file.gcount(); i < m_blockSize; i++)
                         fileBlocks[i] = XModem::SUB;
                 }
             }
@@ -150,17 +153,11 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
                 !m_device.write(&blockNumber1) ||
                 !m_device.write(&blockNumber2) ||
                 !m_device.write(fileBlocks.data(), fileBlocks.size()) ||
-                !m_device.write(crcBlock, 2)) goto write_failed;
+                !m_device.write(crcBlock, 2)) break;
 
         Logger::get() << "Sent block " << g << Logger::NewLine;
     }
 
-    file.close();
-
-    m_error = Error::NONE;
-    return true;
-
-    write_failed:
     m_error = Error::DEVICE_RELATED;
     return false;
 }
