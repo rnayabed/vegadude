@@ -53,6 +53,7 @@ std::string SerialDevice::errorStr()
 }
 
 #ifdef __linux
+
 bool SerialDevice::open()
 {
     m_linuxFD = ::open(m_devicePath.c_str(),
@@ -73,14 +74,14 @@ bool SerialDevice::open()
     }
 
     // Parity
-    if ( m_deviceProperties.parity)
+    if (m_deviceProperties.parity)
         tty.c_cflag |= PARENB;
     else
         tty.c_cflag &= ~PARENB;
 
 
     // Stop Bit
-    if ( m_deviceProperties.stopBits == 1)
+    if (m_deviceProperties.stopBits == 1)
         tty.c_cflag &= ~CSTOPB;
     else
         tty.c_cflag |= CSTOPB;
@@ -88,24 +89,34 @@ bool SerialDevice::open()
 
     //Bits per byte
     tty.c_cflag &= ~CSIZE;
-    if ( m_deviceProperties.bits == 5)
+    if (m_deviceProperties.bits == 5)
         tty.c_cflag |= CS5;
-    else if ( m_deviceProperties.bits == 6)
+    else if (m_deviceProperties.bits == 6)
         tty.c_cflag |= CS6;
-    else if ( m_deviceProperties.bits == 7)
+    else if (m_deviceProperties.bits == 7)
         tty.c_cflag |= CS7;
-    else if ( m_deviceProperties.bits == 8)
+    else if (m_deviceProperties.bits == 8)
         tty.c_cflag |= CS8;
 
 
     // RTS/CTS
-    if ( m_deviceProperties.rtsCts)
+    if (m_deviceProperties.rtsCts)
         tty.c_cflag |= CRTSCTS;
     else
         tty.c_cflag &= ~CRTSCTS;
 
 
     tty.c_cflag |= CREAD | CLOCAL;
+
+    /*
+     * We need cflag to be 0001 1100 1011 0010
+     *
+     * I could not find documentation on how to set nibbles 1 and 4.
+     */
+    tty.c_cflag = (tty.c_cflag | 0x1002) & ~0xd;
+
+    //tty.c_cflag = 7346;
+
     // CREAD = allows us to read data
     // CLOCAL = disables "carrier detect"
     //          disables SIGHUP signal to be sent when disconnected
@@ -127,13 +138,11 @@ bool SerialDevice::open()
 
     tty.c_lflag &= ~ISIG; // Disable interpretation of INTR, QUIT and SUSP
 
-
     // Input modes flags
 
     tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Turn off s/w flow ctrl
 
     tty.c_iflag &= ~(IGNBRK|BRKINT|PARMRK|ISTRIP|INLCR|IGNCR|ICRNL); // Disable any special handling of received bytes
-
 
     // Output modes flags
 
@@ -180,7 +189,7 @@ bool SerialDevice::close()
     }
 }
 
-bool SerialDevice::read(unsigned char *bytes, size_t size)
+bool SerialDevice::read(std::span<unsigned char> bytes)
 {
     if (m_linuxFD == -1)
     {
@@ -189,7 +198,7 @@ bool SerialDevice::read(unsigned char *bytes, size_t size)
     }
     else
     {
-        if (::read(m_linuxFD, bytes, size) != -1)
+        if (::read(m_linuxFD, bytes.data(), bytes.size()) != -1)
         {
             m_error = Error::NONE;
             return true;
@@ -202,7 +211,7 @@ bool SerialDevice::read(unsigned char *bytes, size_t size)
     }
 }
 
-bool SerialDevice::write(const unsigned char *bytes, size_t size)
+bool SerialDevice::write(std::span<const unsigned char> bytes)
 {
     if (m_linuxFD == -1)
     {
@@ -211,7 +220,7 @@ bool SerialDevice::write(const unsigned char *bytes, size_t size)
     }
     else
     {
-        if (::write(m_linuxFD, bytes, size) == size)
+        if (::write(m_linuxFD, bytes.data(), bytes.size()) == static_cast<ssize_t>(bytes.size()))
         {
             m_error = Error::NONE;
             return true;
