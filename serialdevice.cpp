@@ -274,6 +274,10 @@ bool SerialDevice::open()
 
     COMMTIMEOUTS timeouts;
     timeouts.ReadIntervalTimeout = m_readTimeout;
+    timeouts.ReadTotalTimeoutConstant = 50;
+    timeouts.ReadTotalTimeoutMultiplier = 10;
+    timeouts.WriteTotalTimeoutConstant = 50;
+    timeouts.WriteTotalTimeoutMultiplier = 10;
 
     if (SetCommTimeouts(m_winHandle, &timeouts) == FALSE)
     {
@@ -292,9 +296,9 @@ bool SerialDevice::close()
     return false;
 }
 
-bool SerialDevice::read(unsigned char *bytes, size_t size)
+bool SerialDevice::read(std::span<unsigned char> bytes)
 {
-    if (ReadFile(m_winHandle, bytes, size, NULL, NULL))
+    if (ReadFile(m_winHandle, bytes.data(), bytes.size(), NULL, NULL))
     {
         m_error = Error::NONE;
         return true;
@@ -306,12 +310,12 @@ bool SerialDevice::read(unsigned char *bytes, size_t size)
     }
 }
 
-bool SerialDevice::write(const unsigned char *bytes, size_t size)
+bool SerialDevice::write(std::span<const unsigned char> bytes)
 {
     unsigned long written;
-    bool result = WriteFile(m_winHandle, bytes, size, &written, NULL);
+    bool result = WriteFile(m_winHandle, bytes.data(), bytes.size(), &written, NULL);
 
-    if (result && size != written)
+    if (result && bytes.size() == written)
     {
         m_error = Error::NONE;
         return true;

@@ -23,6 +23,23 @@ bool Logger::setup(std::filesystem::path& filePath)
     return m_log;
 }
 
+void Logger::showProgress(const std::string& message, const float &ratio)
+{
+    constexpr int32_t barSize = 50;
+    int32_t completeSize = ratio * barSize;
+    int32_t remainingSize = barSize - completeSize;
+
+    std::cerr << "\rProgress [";
+    for (int32_t i = 0; i < completeSize; i++)
+        std::cerr << "#";
+    for (int32_t i = 0; i < remainingSize; i++)
+        std::cerr << "-";
+    std::cerr << "] - "
+              << static_cast<int>(ratio * 100)
+              << "% - "
+              << message;
+}
+
 void Logger::close()
 {
     get() << NewLine;

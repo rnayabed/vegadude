@@ -88,3 +88,22 @@ NOTE: you cannot use --aries and --xmodem-block-size / --serial* arguments (exce
 ## Note
 
 vegadude does not play well with sniffer programs like [interceptty](https://github.com/geoffmeyers/interceptty), *for now*.
+
+## License
+
+vegadude is licensed to [GNU General Public License v3.0](https://github.com/rnayabed/vegadude/blob/master/LICENSE).
+
+```
+vegadude - Utility application to upload programs on CDAC's VEGA Microprocessor powered boards.
+Copyright (C) 2023 Debayan Sutradhar (rnayabed)
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+```
+

@@ -382,7 +382,7 @@ int main(int argc, char** argv)
                   << "Read Timeout (in milliseconds): " << serialReadTimeout << Logger::NewLine
                   << "XMODEM Block Size " << xmodemBlockSize << Logger::NewLine
                   << "XMODEM Max Retry: " << xmodemMaxRetry << Logger::NewLine
-                  << "================================================" << Logger::NewLine;
+                  << "================================================" << Logger::NewLine << Logger::NewLine;
 
     SerialDevice device{targetPath, dp, serialReadTimeout};
 

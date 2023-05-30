@@ -6,13 +6,12 @@
 class Device
 {
 public:
-    Device();
 
-    bool read(unsigned char* bytes);
-    bool write(const unsigned char* bytes);
+    virtual bool read(std::span<unsigned char> bytes) = 0;
+    virtual bool write(std::span<const unsigned char> bytes) = 0;
 
-    virtual bool read(unsigned char* bytes, size_t size) = 0;
-    virtual bool write(const unsigned char* bytes, size_t size) = 0;
+    bool read(unsigned char* byte);
+    bool write(const unsigned char* byte);
 };
 
 #endif // DEVICE_H

@@ -13,6 +13,9 @@ public:
 
     static Logger& get();
     bool setup(std::filesystem::path& filePath);
+
+    void showProgress(const std::string& message, const float& ratio);
+
     void close();
 
     constexpr static char NewLine {'\n'};

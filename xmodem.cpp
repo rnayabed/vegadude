@@ -17,6 +17,7 @@
 #include <fstream>
 #include <istream>
 #include <iostream>
+#include <cmath>
 
 #include "logger.h"
 
@@ -53,16 +54,17 @@ std::string XModem::errorStr()
 
 bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfterUpload)
 {
-    unsigned char blockNumber1 = 1;
+    unsigned char blockNumber1;
     unsigned char blockNumber2;
     unsigned char crcBlock[2];
 
-    size_t g = 0;
+    size_t currentBlock;
     int32_t currentTry = 0;
 
-    std::ifstream file{filePath, std::ios_base::in | std::ios_base::binary};
+    size_t fileSize = std::filesystem::file_size(filePath);
+    size_t noOfBlocks = std::ceil(float(fileSize) / float(m_blockSize));
 
-    std::cout << "FILE PATH" << filePath << "\nm_blockSize:" << m_blockSize << std::endl;
+    std::ifstream file{filePath, std::ios_base::in | std::ios_base::binary};
 
     if(!file.is_open())
     {
@@ -82,25 +84,18 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
             return false;
         }
 
-        if (currentTry >= m_maxRetry)
-        {
-            m_error = Error::MAX_RETRY_SURPASSED;
-            return false;
-        }
-
-        currentTry++;
-
-        Logger::get() << "READ: " << +rb << Logger::NewLine;
-
         if (rb != XModem::NAK)
         {
             if (rb == XModem::C)
             {
                 blockNumber1 = 0;
+                currentBlock = 1;
+                currentTry = 0;
                 file.seekg(0);
             }
             else if (rb == XModem::ACK)
             {
+
                 if (blockNumber1 == 255)
                     blockNumber1 = 0;
                 else
@@ -108,7 +103,7 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
 
                 currentTry = 0;
 
-                g++;
+                currentBlock++;
             }
             else if (rb == XModem::CAN)
             {
@@ -127,6 +122,7 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
                 if (startAfterUpload)
                     if (!m_device.write(&CR)) break;
 
+                Logger::get() << Logger::NewLine;
                 file.close();
                 m_error = Error::NONE;
                 return true;
@@ -135,7 +131,6 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
             {
                 file.read(reinterpret_cast<char*>(fileBlocks.data()), m_blockSize);
 
-                std::cout << "file.gcount(): " << file.gcount() << std::endl;
                 if (file.gcount() != m_blockSize)
                 {
                     for (int32_t i = file.gcount(); i < m_blockSize; i++)
@@ -143,6 +138,14 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
                 }
             }
         }
+
+        if (currentTry >= m_maxRetry)
+        {
+            m_error = Error::MAX_RETRY_SURPASSED;
+            return false;
+        }
+
+        currentTry++;
 
         blockNumber2 = 255 - blockNumber1;
         uint16_t crc = CRC::generateCRC16CCITT(fileBlocks);
@@ -152,10 +155,11 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
         if (!m_device.write(&XModem::SOH) ||
                 !m_device.write(&blockNumber1) ||
                 !m_device.write(&blockNumber2) ||
-                !m_device.write(fileBlocks.data(), fileBlocks.size()) ||
-                !m_device.write(crcBlock, 2)) break;
+                !m_device.write(fileBlocks) ||
+                !m_device.write(std::span(crcBlock, 2))) break;
 
-        Logger::get() << "Sent block " << g << Logger::NewLine;
+        Logger::get().showProgress("Sent block " + std::to_string(currentBlock) + "/" + std::to_string(noOfBlocks),
+                                   (float(currentBlock)/float(noOfBlocks)));
     }
 
     m_error = Error::DEVICE_RELATED;

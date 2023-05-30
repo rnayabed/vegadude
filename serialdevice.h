@@ -72,8 +72,8 @@ public:
     const Error& error();
     std::string errorStr();
 
-    bool read(unsigned char* bytes, size_t size);
-    bool write(const unsigned char* bytes, size_t size);
+    bool read(std::span<unsigned char> bytes);
+    bool write(std::span<const unsigned char> bytes);
 
     bool open();
     bool close();

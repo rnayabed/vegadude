@@ -1,14 +1,11 @@
 #include "device.h"
 
-Device::Device()
-{}
-
-bool Device::read(unsigned char* bytes)
+bool Device::read(unsigned char* byte)
 {
-    return read(bytes, 1);
+    return read(std::span(byte, 1));
 }
 
-bool Device::write(const unsigned char* bytes)
+bool Device::write(const unsigned char* byte)
 {
-    return write(bytes, 1);
+    return write(std::span(byte, 1));
 }
