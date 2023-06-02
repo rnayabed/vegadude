@@ -36,8 +36,7 @@ target_compile_options(vegadude PRIVATE
     -Wall -Wextra -Werror
 
     $<$<CONFIG:Debug>:-O0 -ggdb3>
-    $<$<CONFIG:Release>:-Os -Wl,--gc-sections
-    -Wl,-Map=taurus22.map -nostartfiles -fno-builtin-printf
+    $<$<CONFIG:Release>:-Os -Wl,--gc-sections -fno-builtin-printf
     -fno-builtin-puts -fdata-sections -ffunction-sections -fno-builtin-memcmp >
     $<$<CONFIG:MinSizeRel>:-Os>
     $<$<CONFIG:RelWithDebInfo>:-Og -ggdb>
