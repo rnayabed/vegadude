@@ -26,6 +26,7 @@ public:
     {
         NONE,
         DEVICE_RELATED,
+        FILE_DOES_NOT_EXIST,
         FILE_OPEN_FAILED,
         MAX_RETRY_SURPASSED,
         CANCELLED

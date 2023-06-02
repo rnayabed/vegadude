@@ -13,7 +13,11 @@ GNU General Public License for more details.
 
 cmake_minimum_required(VERSION 3.5)
 
-project(vegadude LANGUAGES CXX)
+set(VERSION 1.0)
+
+project(vegadude
+    VERSION ${VERSION}
+    LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -27,7 +31,8 @@ add_executable(vegadude
     xmodem.h xmodem.cpp)
 
 add_compile_definitions(
-    VERSION=1.0
+    VERSION=${VERSION}
+    GIT_REPOSITORY="https://github.com/rnayabed/vegadude"
     LICENSE="https://github.com/rnayabed/vegadude/blob/master/LICENSE"
     ARIES_XMODEM_BLOCK_SIZE=128
 )

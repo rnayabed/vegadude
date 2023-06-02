@@ -369,7 +369,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Logger::get() << "vegadude " << VERSION << Logger::NewLine << Logger::NewLine
+    Logger::get() << "vegadude " << VERSION << Logger::NewLine
+                  << "<" << GIT_REPOSITORY << ">" << Logger::NewLine
+                  << Logger::NewLine
                   << "================================================" << Logger::NewLine
                   << "Device Path: " << targetPath << Logger::NewLine
                   << "Binary Path: " << binaryPath << Logger::NewLine

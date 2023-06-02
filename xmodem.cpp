@@ -41,6 +41,8 @@ std::string XModem::errorStr()
         return "None";
     case DEVICE_RELATED:
         return "Device related error";
+    case FILE_DOES_NOT_EXIST:
+        return "File does not exist";
     case FILE_OPEN_FAILED:
         return "Failed to open file";
     case MAX_RETRY_SURPASSED:
@@ -60,6 +62,12 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
 
     size_t currentBlock;
     int32_t currentTry = 0;
+
+    if (!std::filesystem::exists(filePath))
+    {
+        m_error = Error::FILE_DOES_NOT_EXIST;
+        return false;
+    }
 
     size_t fileSize = std::filesystem::file_size(filePath);
     size_t noOfBlocks = std::ceil(float(fileSize) / float(m_blockSize));
