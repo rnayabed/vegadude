@@ -407,7 +407,9 @@ int main(int argc, char** argv)
         return -1;
     }
 
-    Logger::get() << "Successfully uploaded!";
+    Logger::get() << (startAfterUpload ?
+                          "Successfully uploaded and started program!"
+                        : "Successfully uploaded program! Press enter in serial terminal to start program.");
 
     Logger::get().close();
 

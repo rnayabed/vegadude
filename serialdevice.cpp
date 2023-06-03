@@ -39,6 +39,8 @@ std::string SerialDevice::errorStr()
         return "Failed to get file descriptor attributes";
     case FAILED_TO_SET_FD_ATTRS:
         return "Failed to set file descriptor attributes";
+    case INVALID_BAUD:
+        return "Invalid baud";
     case NOT_SUPPORTED:
         return "Operation not supported";
     case READ_FAILED:
@@ -108,15 +110,6 @@ bool SerialDevice::open()
 
     tty.c_cflag |= CREAD | CLOCAL;
 
-    /*
-     * We need cflag to be 0001 1100 1011 0010
-     *
-     * I could not find documentation on how to set nibbles 1 and 4.
-     */
-    tty.c_cflag = (tty.c_cflag | 0x1002) & ~0xd;
-
-    //tty.c_cflag = 7346;
-
     // CREAD = allows us to read data
     // CLOCAL = disables "carrier detect"
     //          disables SIGHUP signal to be sent when disconnected
@@ -156,10 +149,54 @@ bool SerialDevice::open()
     tty.c_cc[VMIN] = 0;
     tty.c_cc[VTIME] = m_readTimeout / 100; // milli -> deci
 
+    // For some reason cfsetspeed does not work well with integers
+    speed_t speed;
+    switch(m_deviceProperties.baud)
+    {
+    case 50:
+        speed = B50; break;
+    case 75:
+        speed = B75; break;
+    case 110:
+        speed = B110; break;
+    case 134:
+        speed = B134; break;
+    case 150:
+        speed = B150; break;
+    case 200:
+        speed = B200; break;
+    case 300:
+        speed = B300; break;
+    case 600:
+        speed = B600; break;
+    case 1200:
+        speed = B1200; break;
+    case 1800:
+        speed = B1800; break;
+    case 2400:
+        speed = B2400; break;
+    case 4800:
+        speed = B4800; break;
+    case 9600:
+        speed = B9600; break;
+    case 19200:
+        speed = B19200; break;
+    case 38400:
+        speed = B38400; break;
+    case 57600:
+        speed = B57600; break;
+    case 115200:
+        speed = B115200; break;
+    case 230400:
+        speed = B230400; break;
+    case 460800:
+        speed = B460800; break;
+    default:
+        m_error = Error::INVALID_BAUD;
+        return false;
+    }
 
-    // set baud rate
-    cfsetispeed(&tty, m_deviceProperties.baud);
-    cfsetospeed(&tty, m_deviceProperties.baud);
+    cfsetspeed(&tty, speed);
 
     if (!ioctl(m_linuxFD, TCSETS, &tty))
     {

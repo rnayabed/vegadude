@@ -48,6 +48,7 @@ public:
         FAILED_TO_OPEN_DEVICE,
         FAILED_TO_GET_FD_ATTRS,
         FAILED_TO_SET_FD_ATTRS,
+        INVALID_BAUD,
         NOT_SUPPORTED,
         READ_FAILED,
         WRITE_FAILED,
