@@ -2,12 +2,14 @@
 
 vegadude is a utility application to upload programs on CDAC's VEGA Microprocessor powered boards.
 
-Protocols implemented:
+## Protocols implemented:
+
 * Serial + XMODEM (w/ CRC-16-CCITT) (CDAC Aries)
 
-Platforms :
+## Supported Platforms
+
 * Linux
-* Windows (WIP)
+* Windows
 
 ## Clone
 
