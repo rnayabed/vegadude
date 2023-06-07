@@ -60,7 +60,7 @@ bool XModem::upload(const std::filesystem::path &filePath, const bool& startAfte
     unsigned char blockNumber2;
     unsigned char crcBlock[2];
 
-    size_t currentBlock;
+    size_t currentBlock = 0;
     int32_t currentTry = 0;
 
     if (!std::filesystem::exists(filePath))
