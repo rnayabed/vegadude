@@ -40,11 +40,11 @@ add_compile_definitions(
 target_compile_options(vegadude PRIVATE
     -Wall -Wextra -Werror
 
-    $<$<CONFIG:Debug>:-O0 -ggdb3>
-    $<$<CONFIG:Release>:-Os -Wl,--gc-sections -fno-builtin-printf
-    -fno-builtin-puts -fdata-sections -ffunction-sections -fno-builtin-memcmp >
+    $<$<CONFIG:Debug>:-Og -ggdb3>
+    $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:MinSizeRel>:-Os>
-    $<$<CONFIG:RelWithDebInfo>:-Og -ggdb>
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-Wl,--gc-sections -fno-builtin-printf
+    -fno-builtin-puts -fdata-sections -ffunction-sections -fno-builtin-memcmp>
 )
 
 install(TARGETS vegadude
