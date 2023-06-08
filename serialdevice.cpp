@@ -39,8 +39,8 @@ std::string SerialDevice::errorStr()
         return "Failed to get file descriptor attributes";
     case FAILED_TO_SET_FD_ATTRS:
         return "Failed to set file descriptor attributes";
-    case INVALID_BAUD:
-        return "Invalid baud";
+    case INVALID_BAUD_RATE:
+        return "Invalid baud rate";
     case NOT_SUPPORTED:
         return "Operation not supported";
     case READ_FAILED:
@@ -151,7 +151,7 @@ bool SerialDevice::open()
 
     // For some reason cfsetspeed does not work well with integers
     speed_t speed;
-    switch(m_deviceProperties.baud)
+    switch(m_deviceProperties.baudRate)
     {
     case 50:
         speed = B50; break;
@@ -192,7 +192,7 @@ bool SerialDevice::open()
     case 460800:
         speed = B460800; break;
     default:
-        m_error = Error::INVALID_BAUD;
+        m_error = Error::INVALID_BAUD_RATE;
         return false;
     }
 

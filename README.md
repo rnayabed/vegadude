@@ -37,8 +37,8 @@ Usage:  [-l | --log] [-bp | --binary-path]
         [-tp | --target-path]
         [-xmr | --xmodem-max-retry] [-xbs | --xmodem-block-size]
         [--aries] [-sp | --serial-parity] [-ssb | --serial-stop-bits]
-        [-src | --serial-rts-cts] [-sbi | --serial-bits]
-        [-sba | --serial-baud-rate] [-srt | --serial-read-timeout]
+        [-src | --serial-rts-cts] [-sb | --serial-bits]
+        [-sbr | --serial-baud-rate] [-srt | --serial-read-timeout]
         [-sau | --start-after-upload] [--license] [-h | --help]
 
 Option Summary:
@@ -67,10 +67,10 @@ Option Summary:
                                         flow control.
                                         Default is false.
 
-    -sbi | --serial-bits                Required. Specify the number of data bits sent
+    -sb | --serial-bits                 Required. Specify the number of data bits sent
                                         in a byte to the target.
 
-    -sba | --serial-baud-rate           Required. Specify serial baud rate of the
+    -sbr | --serial-baud-rate           Required. Specify serial baud rate of the
                                         target.
 
     -srt | --serial-read-timeout        Optional. Specify timeout for each read in
@@ -84,7 +84,7 @@ Option Summary:
 
     -h | --help                         Print this message.
 
-NOTE: you cannot use --aries and --xmodem-block-size / --serial* arguments (except --serial-read-timeout) at the same time.
+NOTE: you cannot use --aries and --xmodem-block-size / --serial* arguments (except --serial-read-timeout) at the same time.)
 ```
 
 ## Note

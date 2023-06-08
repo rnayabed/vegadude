@@ -48,7 +48,7 @@ public:
         FAILED_TO_OPEN_DEVICE,
         FAILED_TO_GET_FD_ATTRS,
         FAILED_TO_SET_FD_ATTRS,
-        INVALID_BAUD,
+        INVALID_BAUD_RATE,
         NOT_SUPPORTED,
         READ_FAILED,
         WRITE_FAILED,
@@ -61,7 +61,7 @@ public:
         int32_t stopBits = -1;
         bool rtsCts = false;
         int32_t bits = -1;
-        int32_t baud = -1;
+        int32_t baudRate = -1;
     };
 
     constexpr static DeviceProperties ARIES{false, 1, false, 8, 115200};

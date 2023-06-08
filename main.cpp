@@ -65,10 +65,10 @@ ArgType getArgType(char* const& arg)
     else if(!string(arg).compare("-src") ||
             !string(arg).compare("--serial-rts-cts"))
         return ArgType::SERIAL_RTS_CTS_YES;
-    else if(!string(arg).compare("-sbi") ||
+    else if(!string(arg).compare("-sb") ||
             !string(arg).compare("--serial-bits"))
         return ArgType::SERIAL_BITS;
-    else if(!string(arg).compare("-sba") ||
+    else if(!string(arg).compare("-sbr") ||
             !string(arg).compare("--serial-baud-rate"))
         return ArgType::SERIAL_BAUD_RATE;
     else if(!string(arg).compare("-sau") ||
@@ -104,8 +104,8 @@ void printUsage()
         [-tp | --target-path]
         [-xmr | --xmodem-max-retry] [-xbs | --xmodem-block-size]
         [--aries] [-sp | --serial-parity] [-ssb | --serial-stop-bits]
-        [-src | --serial-rts-cts] [-sbi | --serial-bits]
-        [-sba | --serial-baud-rate] [-srt | --serial-read-timeout]
+        [-src | --serial-rts-cts] [-sb | --serial-bits]
+        [-sbr | --serial-baud-rate] [-srt | --serial-read-timeout]
         [-sau | --start-after-upload] [--license] [-h | --help]
 
 Option Summary:
@@ -134,10 +134,10 @@ Option Summary:
                                         flow control.
                                         Default is false.
 
-    -sbi | --serial-bits                Required. Specify the number of data bits sent
+    -sb | --serial-bits                 Required. Specify the number of data bits sent
                                         in a byte to the target.
 
-    -sba | --serial-baud-rate           Required. Specify serial baud rate of the
+    -sbr | --serial-baud-rate           Required. Specify serial baud rate of the
                                         target.
 
     -srt | --serial-read-timeout        Optional. Specify timeout for each read in
@@ -224,12 +224,12 @@ bool validateProps(const std::filesystem::path& targetPath,
         valid = false;
     }
 
-    if (dp.baud == -1)
+    if (dp.baudRate == -1)
     {
         Logger::get() << "Baud rate not invalid/specified." << Logger::NewLine;
         valid = false;
     }
-    else if(dp.baud < 1)
+    else if(dp.baudRate < 1)
     {
         Logger::get() << "Baud rate needs to be atleast 1." << Logger::NewLine;
         valid = false;
@@ -318,7 +318,7 @@ int main(int argc, char** argv)
             break;
         case ArgType::SERIAL_BAUD_RATE:
             isDevPropsSetManual = true;
-            dp.baud = stoi_e(argv[++i]);
+            dp.baudRate = stoi_e(argv[++i]);
             break;
         case ArgType::SERIAL_READ_TIMEOUT:
             serialReadTimeout = stoi_e(argv[++i]);
@@ -380,7 +380,7 @@ int main(int argc, char** argv)
                   << "Stop bits: " << dp.stopBits << Logger::NewLine
                   << "RTS CTS: " << dp.rtsCts << Logger::NewLine
                   << "Bits: " << dp.bits << Logger::NewLine
-                  << "Baud Rate: " << dp.baud << Logger::NewLine
+                  << "Baud Rate: " << dp.baudRate << Logger::NewLine
                   << "Read Timeout (in milliseconds): " << serialReadTimeout << Logger::NewLine
                   << "XMODEM Block Size " << xmodemBlockSize << Logger::NewLine
                   << "XMODEM Max Retry: " << xmodemMaxRetry << Logger::NewLine
