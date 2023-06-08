@@ -1,5 +1,7 @@
 # vegadude
 
+![version](https://img.shields.io/badge/Version-1.0-green)
+
 vegadude is a utility application to upload programs on CDAC's VEGA Microprocessor powered boards.
 
 ## Protocols implemented:
