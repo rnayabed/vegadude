@@ -298,7 +298,7 @@ bool SerialDevice::open()
         return false;
     }
 
-    params.BaudRate = m_deviceProperties.baud;
+    params.BaudRate = m_deviceProperties.baudRate;
     params.ByteSize = m_deviceProperties.bits;
 
     if (m_deviceProperties.stopBits == 1)
