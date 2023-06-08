@@ -38,13 +38,16 @@ add_compile_definitions(
 )
 
 target_compile_options(vegadude PRIVATE
-    -Wall -Wextra -Werror
+    -Wall -Wextra -Werror -Wpedantic
 
     $<$<CONFIG:Debug>:-Og -ggdb3>
     $<$<CONFIG:Release>:-O3>
     $<$<CONFIG:MinSizeRel>:-Os>
-    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-Wl,--gc-sections -fno-builtin-printf
-    -fno-builtin-puts -fdata-sections -ffunction-sections -fno-builtin-memcmp>
+    $<$<CONFIG:RelWithDebInfo>:-O3 -ggdb3>
+)
+
+target_link_options(vegadude PRIVATE
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections -Wl,--gc-sections -s>
 )
 
 install(TARGETS vegadude
