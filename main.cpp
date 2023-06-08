@@ -380,7 +380,7 @@ int main(int argc, char** argv)
                   << "Stop bits: " << dp.stopBits << Logger::NewLine
                   << "RTS CTS: " << dp.rtsCts << Logger::NewLine
                   << "Bits: " << dp.bits << Logger::NewLine
-                  << "Baud Rate: " << dp.baudRate << Logger::NewLine
+                  << "Baud rate: " << dp.baudRate << Logger::NewLine
                   << "Read Timeout (in milliseconds): " << serialReadTimeout << Logger::NewLine
                   << "XMODEM Block Size " << xmodemBlockSize << Logger::NewLine
                   << "XMODEM Max Retry: " << xmodemMaxRetry << Logger::NewLine

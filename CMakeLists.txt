@@ -31,7 +31,7 @@ add_executable(vegadude
     xmodem.h xmodem.cpp)
 
 add_compile_definitions(
-    VERSION=${VERSION}
+    VERSION="${VERSION}"
     GIT_REPOSITORY="https://github.com/rnayabed/vegadude"
     LICENSE="https://github.com/rnayabed/vegadude/blob/master/LICENSE"
     ARIES_XMODEM_BLOCK_SIZE=128
