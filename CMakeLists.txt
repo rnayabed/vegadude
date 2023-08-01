@@ -46,9 +46,15 @@ target_compile_options(vegadude PRIVATE
     $<$<CONFIG:RelWithDebInfo>:-O3 -ggdb3>
 )
 
-target_link_options(vegadude PRIVATE
-    $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections -Wl,--gc-sections -s>
-)
+if(APPLE)
+    target_link_options(vegadude PRIVATE
+        $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections -Wl>
+    )
+else()
+    target_link_options(vegadude PRIVATE
+        $<$<OR:$<CONFIG:Release>,$<CONFIG:MinSizeRel>>:-ffunction-sections -fdata-sections -Wl,--gc-sections -s>
+    )
+endif()
 
 install(TARGETS vegadude
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}

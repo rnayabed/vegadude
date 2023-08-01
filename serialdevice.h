@@ -36,6 +36,11 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <string.h>
+#elif __APPLE__
+#include <fcntl.h>
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #endif
 
 class SerialDevice : public Device
@@ -89,6 +94,8 @@ private:
     int32_t m_linuxFD = -1;
 #elif __WIN32
     HANDLE m_winHandle = NULL;
+#elif __APPLE__
+    int32_t m_macFD = -1;
 #endif
 
     bool openLinux();
